@@ -1,0 +1,353 @@
+---
+title: "Perturbación a las gaviotas: Alternativa a un modelo propuesto de observadores y observados"
+author:
+  - name: Omar Carrasco
+    email: ocalo@alumni.uv.es
+    affiliation: Universidad de Valencia
+    correspondingauthor: FALSE
+
+  - name: Estevo Area
+    email: estevo@alumni.uv.es
+    affiliation: Universidad de Valencia
+
+
+address:
+  - code: Universidad de Valencia
+    address: Department, Street, España, State, Zip
+  - code: Another University
+    address: Department, Street, City, State, Zip
+
+abstract: |
+   La distancia de inicio de vuelo (FID) por parte de las aves como instinto de supervivencia por depredadores es un indicador de perturbación de fauna; por ello en un estudio previo se estimò un modelo lineal que predice FID en *Larus michahellis*en función del número de visitantes y la densidad de parejas de reproductoras en las colonias de gaviotas. 
+   
+   En el presente trabajo se proponen modelos alternativos de predicción FID en función de estas dos variables. Se han creado dos modelos jerárquicos bayesianos con efectos aleatorios con WinBUGS por MCMC e INLA por aproximación, que mejoran las predicciones del modelo lineal del anterior trabajo. Se demuestra también que el aumento en un punto porcentual del número de visitantes disminuye la FID hasta en 0.75 puntos porcentuales y que la densidad de parejas lo hace hasta en un 0.99 mejorando la predicción del modelo por la introducción de efectos aleatorios
+
+keywords: 
+  - gull
+  - INLA
+  - GLM
+  - FID
+  - ecology
+  - statistic
+
+date: "`r Sys.Date()`"
+classoption: preprint, 3p, authoryear
+bibliography: biblio2.bib
+linenumbers: false
+numbersections: true
+# Use a CSL with `citation_package = "default"`
+# csl: https://www.zotero.org/styles/elsevier-harvard
+output: 
+  rticles::elsevier_article:
+    keep_tex: true
+    citation_package: natbib
+    latex_engine: xelatex
+    
+header-includes:
+- \renewcommand{\figurename}{Figura}
+- \renewcommand{\tablename}{Tabla}
+- \usepackage{amsmath}
+- \usepackage{bm}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+
+---
+```{r include=FALSE}
+library(ggplot2)
+library(GGally)
+require(rticles)
+require(fitdistrplus)
+require(knitr)
+require(psych)
+library(INLA)
+library(tidyverse)
+library(kableExtra)
+library(R2WinBUGS)
+options(tinytex.verbose = TRUE)
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE)
+```
+
+
+# INTRODUCCIÓN
+
+La vida silvestre en las áreas naturales esta constantemente presionada por actividades humanas como el turismo, el cual se ha recuperado en post pandemia COVID en Europa [@eurostat_eu_2022], sin embargo al no poder cesar esta actividad es necesario establecer distancias sanas  de observadores para controlar la presión ejercida  sobre la fauna [@finney_effect_2005]. La toma de decisiones sobre estos temas no pueden ser arbitrario ya que debe presentar equilibrio entre el derecho a la observación y la protección de los animales, por tanto se debe estudiar y predecir adecuadamente [@mcclung_nature-based_2004].  
+
+
+Un caso estudiado previamente es la distancia de inicio de vuelo (FID en ingles) de las gaviotas *Larus michahellis* en diferentes islas en Europa basado en variables controladas como son número de visitantes por isla y parejas reproductoras de gaviotas [@martinez-abrain_compromise_2008], ajustando un modelo de regresión lineal usando transformaciones sobre las variables explicativas. Este modelo explica aproximadamente un 65\% de los datos ($r^2=0.64$), aunque también los autores intentaron explicar este fenómeno desde el punto de vista bayesiano con similares conclusiones. 
+
+
+En el presente trabajo tiene por objetivo el replicar el trabajo de @martinez-abrain_compromise_2008 e intentar mejorar su estimación aplicando técnicas como modelos lineales generalizados (GLM), modelos  modelos jerárquicos bayesianos (HBM) como alternativas a lo propuesto en ka investigación mencionada intentado evitar transformar las covariables.
+
+
+# MÉTODOS
+
+## Análisis descriptivo de datos 
+
+A partir de la base de datos de vuelo de las gaviotas en 18 islas mencionadas es necesario realizar una descripción de datos utilizando una descripción numérica de datos y una matriz de correlación entre las variables para entender la distribución apropiada y las posibles transformaciones. 
+
+
+## Variable respuesta
+
+
+FID continúa siendo la variable respuesta, tomando las medias de estas distancias (meanFID), con valores continuos positivos distintos de cero, que se tomó como la media de las distancias de vuelo medidas en el artículo mencionado anteriormente. Se realizó pruebas de ajuste de distribución mediante el paquete `fitdistrplus` [@delignette-muller_fitdistrplus_2015] donde el mejor ajuste de distribución por BIC(Bayesian information Criterion) y AIC(Akaike Information Criterion) fue con la distribución Gamma.
+
+
+
+## Variable explicativa
+
+
+Se usará dos variables explicativas: la media del número de visitantes a cada isla (*visitors*) y número de pares de grullas reproductoras (*density*). 
+
+
+
+## Análisis estadístico
+
+
+A partir del análisis descriptivo se ajustó la variable respuesta con GLM de la familia Gamma con $link=log$ estimando los parámetros máxima verosimilitud estimado con R [@r_core_team_r_2022-1]. También se analizó un modelo jerárquico (HBM) tomando en cuenta un efecto aleatorio (siendo $b_{g(i)}\sim N(0,\sigma_b)$ )de cada isla con regresión gamma con $link=log$ estimando los parámetros con inferencia bayesiana por medio de `WINBUGS` y `R2WinBUGS` [@sturtz_r2winbugs_2005;@lunn_winbugs_2000].
+
+
+Además se analizó un modelo lineal mixto generalizado usando la aproximación integrada aproximada de Laplace (Integrated Nested Laplace Approximation o INLA en ingles) en función de mejorar la eficiencia computacional al calcular el modelo con el paquete `INLA`[@rue_approximate_2009]. Tanto para el modelo jerárquico bayesiano como INLA se usó la numeración de las islas como índice de identificación para el efecto aleatorio y con la distribución normal de media 0 como se menciona anteriormente.
+
+La precisión de las estimaciones de los modelos se evaluaron con la media con un $95\%$ de confianza y $95\%$ de credibilidad, respectivamente, tomando en cuenta su significancia estadística o relevancia en el modelo. Dado que comparar los modelos de diferentes distribuciones es complicado de interpretar, se prefiere la predicción evaluado por medio del error cuadrático medio (RMSE) y compración grafica.
+
+Aunque se ajustó un modelo aditivo generalizado(GAM), hay solo 18 repeticiones por tanto el número de splines sería insuficiente para lograr un ajuste adecuado pues el número de coeficientes sería mayor que la cantidad de datos recolectados para lograr el suavizado de la curva deseado. Además, el efecto aleatorio por cada isla no es posible desde el punto de vista frecuentista no es posible por tanto el modelo lineal mixto generalizado se hace directamente con una aproximación bayesiana.
+
+# RESULTADOS
+
+En la Figura 1 se observa la distribución de las dos covariables su correlación con meanFID. El número de visitantes se relaciona de manera significativa con la transformación logarítmica de la FID, mientras que la densidad de parejas reproductoras no lo hace. Las dos covariables no tienen correlación y por tanto no existen problemas de colinealidad. Se decidió aplicar el logaritmo a meanFID en tanto que todos nuestros modelos van a utilizar la transformación *log* del predictor lineal.
+
+```{r,echo = FALSE, fig.width = 5, fig.height = 3,fig.cap="Matriz gráfica de correlación y scatterplot de variables"}
+
+fid <- read.table (file = file.path("..","FID.dat"), header = T)
+attach(fid)
+
+fid2<-data.frame(log(meanFID),visitors,density)
+names(fid2)<-list("log(FID media)","Visitantes","Densidad parejas")
+a<-ggpairs(fid2, columns = 1:3, aes(alpha = 0.5),
+        lower = list(continuous = "smooth"))
+print(a)
+```
+
+Para entender los datos se presenta  el resumen descriptivo numérico de los datos en la tabla 1, para comprender las transformaciones necesarias que se puede realizar a las covariables para mejorar el ajuste y la distribución de la variables respuesta. 
+
+```{r echo=FALSE}
+descrip<-psych::describe(fid[,c("meanFID","visitors","density")])[,c(3:5,8:9,11:12)]
+kable(descrip,col.names = c("media","SD","mediana","min","max","asimetría","curtosis"),caption = "Descripción numérica de las variables",booktabs = T,align = "c")
+```
+
+
+LEn la descripción de la variable *meanFID* en la tabla 1 se observan los valores de curtosis (-0.7)  y de asimetría (0.78), confirmándose una distribución platicúrtica y más concentración de valores a la izquierda; al comparar estos resultados parece correcto enfocar la búsqueda de modelos en un modelo lineal generalizado (GLM en inglés) con regresión Gamma. Existen pocas repeticiones para pensar en un modelo aditivo generalizado (GAM) que funcione adecuadamente puesto que existen pocos casos y faltarían grados de libertad para los splines. 
+
+La variable *visitors* muestra una media lejos de la mediana, una mayor concentración de datos a la izquierda y mayor apuntamiento que el de la distribución normal (asimetría=1.45; curtosis=0.77), debido se asignó el valor 2 a varias islas que tenían cero visitantes. La variable *density* muestra muestra una media que no coincide con la mediana, donde los datos están concentrados a la izquierda y un gran apuntamiento de la distribución mayor que la normal (asimetría=1.90; curtosis=3.55).
+
+
+## Ajuste de modelos
+
+### Modelo GLM
+
+Se han realizado además tranformaciones en las variables explicativas (transformación logarítmica para la variable *visitantes* y raíz cuadrada para la variable *densidad*) con el objetivo de reducir la curtosis y la asimetría que tenían originalmente. dado que $Y=\text{meanFID}$ que se puede definir como:
+
+$$Y_i\sim Gamma(\mu_i,\nu_i), i = 1,...,18;$$ 
+tal que  $log(\mu_i) = \beta_0 + \beta_1 \cdot \sqrt{Visitantes_i} + \beta_2 \cdot Log(Densidad_i)$
+
+```{r echo=FALSE}
+fit5<-glm(meanFID ~log(visitors) + sqrt(density),family = Gamma(link = "log"))
+glm.pred<-predict.glm(fit5,newdata = fid[,2:3],type = "response")
+```
+
+
+
+## Modelos jerárquicos bayesianos
+
+Por medio de WinBUGS se realizó un modelo jerárquico Bayesiano añadiendo un efecto aleatorio por individuo (islas); de esta manera se simplificó el modelo al eliminar la necesidad de transformación de las covariables simplificando el enunciado del predictor lineal de tal forma que:
+
+$$log(\mu_i)=\beta_0+\beta_1\cdot{Visitantes_i}+\beta_2 \cdot (Densidad_i)+b_{g(i)}$$
+
+```{r include=FALSE}
+original<-lm(sqrt(meanFID)~log(visitors)+sqrt(density))
+original.pred<-predict(original,newdata=fid[,2:3],type="response")^2
+```
+```{r eval=FALSE, include=FALSE}
+modelo<-function(){
+  for(i in 1:n){
+    y[i]~dgamma(shape[i],rate)
+    shape[i]<-mu[i]*rate
+    log(mu[i])<-beta0+beta1*visitors[i]+beta2*density[i]+a[i]
+    a[i]~dnorm(0,tau.ea)
+  }
+
+  rate~dgamma(0.5,0.5)
+  beta0 ~ dflat()
+  beta1 ~ dnorm(0,0.01)
+  beta2 ~ dnorm(0,0.01)
+  tau.ea<-pow(sd.ea,-2)
+  sd.ea ~ dunif(0,50)
+
+}
+
+datos<-list(y=meanFID,visitors=visitors,density=density,n=nrow(fid))
+iniciales<-function(){list(beta0=rnorm(1,3.5,0.5),beta1=rnorm(1,0,0.01),beta2=rnorm(1,0,0.01),a=rnorm(nrow(fid),0,2),sd.ea=runif(1,0,10),rate=runif(1))}
+
+parametro<-c("beta0","beta1","beta2","sd.ea","rate","shape")
+
+Result<-bugs(model=modelo,data=datos,inits=iniciales,param=parametro,debug=TRUE,n.iter = 20000,n.burnin = 4000,n.thin = 10)
+saveRDS(Result,"HBS")
+
+```
+
+```{r echo=FALSE}
+Result<-readRDS("HBS")
+winbugs.fid.mean<-Result$mean$shape/Result$mean$rate
+winbugs.fid.var<-Result$mean$shape/(Result$mean$rate)^2
+winbugs.fid.varea<-Result$mean$sd.ea^2
+porc.error<-winbugs.fid.var/(winbugs.fid.varea+winbugs.fid.var)
+
+```
+
+de tal forma que $\text{efecto aleatorio}\rightarrow b_{g(i)}\sim N(0,\sigma_b)$. Se estimó $\sigma_b=$ `r round(winbugs.fid.varea,2)` del modelo por MCMC con parámetros del predictor lineal como se expone en la tabla 2, que empieza a diferir de anteriores modelos, donde la varianza disminuye del intervalo de credibilidad que ahora está explicado por el efecto aleatorio del individuo aunque el error por observaciones es mucho mayor ($\%error=99.5\%$) que el error explicado por el efecto aleatorio. Se usaron 20000 iteraciones burning de 4000, las cuales tomaron aproximadamente 4 minutos.
+
+
+
+```{r echo=FALSE}
+formula3.1 <- meanFID ~  1 + (visitors)+(density)+f(colony, 
+                                                           model  = "iid",
+                                                           hyper  = list(theta = list(prior = "loggamma",param = c(1,0.001))))
+mod3.1.fid = inla(formula3.1, 
+                data            = fid, 
+                family          = "gamma", 
+                control.family    = list(link  = "log"),
+                control.compute = list(config = TRUE,
+                                       dic = TRUE, 
+                                       waic = TRUE, 
+                                       cpo = TRUE),
+                control.predictor = list(compute = TRUE),
+                control.inla      = list(strategy = 'simplified.laplace'))
+
+
+```
+
+## INLA
+
+Se ajustó también un modelo con la técnica INLA con la distribución Gamma y la función link logaritmo sin transformar las covariables y un efecto aleatorio con distribución normal, como se propone también modelo jerárquico bayesiano con WinBUGS. Sin embargo es de notar que los tiempos de calculos fueron de apenas 0.614 segundos, que implica un ahorro sustancial de potencia siendo una base de datos pequeña. Tras comparar varios modelos desde un modelo nulo hasta saturar el modelo, el modelo con mayor DIC se puede definir a la variable respuesta como:
+$$Y_i\sim Gamma(\mu_i,\nu_i), i = 1,...,18;$$ 
+donde el predictor lineal 
+
+$$log(\mu_i)=\beta_0+\beta_1\cdot{Visitantes_i}+\beta_2 \cdot Densidad_i+b_{g(i)}$$
+$$\beta_j \sim N(0,\tau_\beta^{-1}),\tau_\beta \text{ conocido}, j=0,1,2;$$ y  el efecto aleatorio definido como
+$b_i \sim N(0,\tau_b^{-1})$;
+
+se define su prior definido de los hiperparámetros como: $\tau_b \sim logGamma(1,0.001)$
+
+Se estimó que la media de $\tau^{-1}$ es 0.17 (Intervalo de credibilidad: $25\%=0.057$ y $25\%=0.477$), además ambas variables explicativas tienen una fuerte asociación negativa con la variable respuesta, pudiéndose interpretar como un cambio porcentual en $\widehat{E(Yi)} \%$ por disminución del 98\%  de la distancia de inicio de vuelo por cada 100 visitantes que ingresen a la isla, y también puede reducirse la distancia de vuelo en un 75\% por cada pareja reproductora nueva de *Larus michahellis*  en la isla analizada. El predictor con un efecto aleatorio de $\pm 0.17$ puede aumentar o disminuir 18\% dependiendo de la isla.
+```{r eval=FALSE,include=FALSE}
+summary.random <- mod3.1.fid$summary.random$colony
+dgamma(0.5,0.9997764,7066.285)
+sigma.v <- inla.tmarginal(function(x) sqrt(1/x), 
+                          mod3.1.fid$marginals.hyperpar[[1]])
+```
+
+```{r eval=FALSE, include=FALSE}
+plot(inla.smarginal(sigma.v),type="l",xlab="",
+     ylab="",main=expression(paste("Posterior distribution ", sigma)))
+hpd.sigma = inla.hpdmarginal(p=0.95, sigma.v)
+abline(v=hpd.sigma[1],lty=2,col=2)
+abline(v=hpd.sigma[2],lty=2,col=2)
+inla.zmarginal(sigma.v)
+1-inla.pmarginal(0, mod3.fid$marginals.fixed$visitors)
+1-inla.pmarginal(0, mod3.fid$marginals.fixed$density)
+efect.ale.plot<-plot(inla.smarginal(mod3.fid$marginals.fixed$visitors), type="l")
+
+```
+
+## Comparación de modelos
+
+Dado que los modelos son inherentemente distintos no es posible compararlos a todos con deviance explicada, AIC o BIC, por tanto se valora aun más el valor predictivo del modelo, tanto con una comparación visual FID real con las predicciones. Se puede entender que ajustar con GLM con Gamma transformando las variables explicativas no presenta una mejora significativa en la predicción del modelo, como muestra la tabla 2 que el error cuadrativo medio(RMSE) es muy cercano al modelo lineal (LM=11.53 metros; GLM(gamma)=11.49 metros). 
+
+El cambio significativo en la capacidad predictiva de los modelos es marcado por la introducción del efecto aleatorio de cada isla dentro del mismo tanto en el modelo jerárquico bayesiano como en INLA, con menor RMSE (HBM=2.74 metros; INLA=2.5 metros), así como un mayor ajuste a los datos reales si se compara con el gráfico.
+
+
+Aunque era posible mejorar un poco el valor predictivo del modelo INLA usando la transformación de covariables se prefirió la simplicidad del modelo para facilitar su interpretación a partir de las estimaciones de los parametros del preditor lineal.
+
+
+
+```{r,echo = FALSE, fig.width = 5.5, fig.height= 3.6, fig.cap="comparación grafica de predicción de los modelos estimados en conjunto de datos ordenados"}
+orden_mediaFID<-order(meanFID)
+mediaFID_ordenada<-meanFID[orden_mediaFID]
+
+plot(1:18,mediaFID_ordenada, pch = 18, col = c(rep("black",15)),type="o",xlab="Medias FID observadas", ylab="Pred. modelos jerárquicos")
+
+
+Medias_Modelo_Lineal<-c(as.numeric(original.pred)[orden_mediaFID])
+lines(Medias_Modelo_Lineal, pch = 18, col = c(rep("yellow3",15)),type="o")
+
+
+Medias_WinBUGS_ordenadas<-c(winbugs.fid.mean[orden_mediaFID])
+lines(Medias_WinBUGS_ordenadas, pch = 18, col = c(rep("blue",15)),type="o")
+
+
+Medias_INLA_ordenadas<-mod3.1.fid$summary.fitted.values$mean[orden_mediaFID]
+lines(Medias_INLA_ordenadas, pch = 18, col = c(rep("green4",15)),type="o")
+
+
+lines(glm.pred[orden_mediaFID], pch = 18, col = c(rep("red",15)),type="o")
+ 
+legend("topleft",c("FID observada","WinBUGS","INLA","Modelo Lineal","GLM(Gamma)"), col=c("black", "blue","green4", "yellow3","red"),lty=1,cex=0.7)
+```
+
+
+En la tabla 2, además, se puede observar que  tanto el intercepto como los parámetros estimados para visitantes y densidad de parejas reproductoras de gaviotas son similares entre los modelos con distribución gamma, inclusive con los modelos que incluyen variable aleatoria; esta similitud se mantiene incluso con los límites de confianza o credibilidad según corresponda
+```{r}
+library(Metrics)
+rmse_lm<-rmse(meanFID,original.pred)
+rmse_glm<-rmse(meanFID,glm.pred)
+rmse_hbm<-rmse(meanFID,winbugs.fid.mean)
+rmse_inla<-rmse(meanFID,mod3.1.fid$summary.fitted.values$mean)
+rmse_total<-rep(c(rmse_lm,rmse_glm,rmse_hbm,rmse_inla),each=3)
+rmse_total[c(2,3,5,6,8,9,11,12)]<-NA
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+tipo.modelo<-rep(c("LM","GLM(Gamma)","HBM(sin transformar)","INLA(sin transformar)"),each=3)
+coef<-rep(c("Intercepto","visitantes","densidad"),times=4)
+
+media<-c(as.numeric(original$coefficients),as.numeric(fit5$coefficients),c(Result$mean$beta0,Result$mean$beta1,Result$mean$beta2),c(mod3.1.fid$summary.fixed$mean))
+
+low_lim<-c(as.numeric(confint(original)[,1]),as.numeric(confint(fit5)[,1]),as.numeric(c(Result$summary[c("beta0","beta1","beta2"),"2.5%"])), mod3.1.fid$summary.fixed[,3])
+
+up_lim<-c(as.numeric(confint(original)[,2]),as.numeric(confint(fit5)[,2]),as.numeric(c(Result$summary[c("beta0","beta1","beta2"),"97.5%"])), mod3.1.fid$summary.fixed[,5])
+
+tabla3<-data.frame(modelo=tipo.modelo,rmse=rmse_total,coef=coef,media=media,low_lim,up_lim)
+options(knitr.kable.NA = '')
+
+kbl(tabla3[,-1],digits=4 ,caption = "Estimaciones de parametros y bondad predictivs de 4 modelos", booktabs = T,align = "c",col.names = c("RMSE","Predictor","Estimación","Limite inferior 95% \n IC o ICr","Limite superior 95% \n IC o ICr"))%>%pack_rows("LM", 1, 3) %>%pack_rows("GLM(Gamma)", 4, 6)%>% pack_rows("HBM(sin transformar)", 7, 9) %>%pack_rows("INLA(sin transformar)", 10, 12)%>%column_spec(1:5, width = "2cm")
+
+```
+# DISCUSIÓN
+
+## El efecto aleatorio explica otras variables 
+
+El mayor cambio para ajustar un mejor modelo que explique la distribución de residuos no explicados por el modelo lineal ha sido la inclusión de un término de efecto aleatorio no lineal, lo cual mejora en gran medida la predicción y en menor medida el ajuste del modelo, siendo el modelo INLA aquel elegido como mejor modelo para predicción. 
+
+Lo encontrado en el presente trabajo apoya lo hallado por @martinez-abrain_compromise_2008 al decir que ambos predictores lineales diminuyen la FID. Aunque varía en los valores, se debe considerar que esto depende de otros factores no estudiados en su investigación y que se explica en parte por efecto aleatorio de cada isla. Existen investigaciones donde FID depende no solo de la presencia humana sinó de la frecuencia y consistencia de la misma, del tipo de actividad que se realiza y  de factores de fenoplasticidad de las aves (relación de las aves con las personas) que afectan a esta distancia [@botsch_effect_2018;@braimoh_managing_2018].
+
+##Recomendaciones para Administración
+
+Dado que FID es dependiente de la distancia humana que continua disminuyendo en porcentaje hasta en 60% superando los 4000 visitantes, por tanto se puede colocar a los visitantes en sub colonias con al menos 250 paejas reproductoras, para maximizar la distancia de vuelo de las aves y molestar lo menos posible. Hay que notar que esta decisión se debe hacer por isla y que esto depende absolutamente de condición como hábitos de las aves y urbanismo de la fauna, en especial las gaviotas que son beneficiadas muchas veces con alimentos por parte de turistas [@goumas_urban_2020], por tanto los turistas pueden solamente limitar en la distancia minima de observación mas no restringir el acceso al lugar de forma que la distnacia no disminuya más de un 40% del total que esta siendo explicada por la variable aleatoria ya mencionada.
+
+
+# References {-}
+
+
+
